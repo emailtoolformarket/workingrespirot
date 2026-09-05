@@ -79,6 +79,18 @@ function expectJson<T>(data: unknown): T {
   return data as T;
 }
 
+/** True when the error response body actually came from our FastAPI backend. */
+function isRealBackendError(err: unknown): boolean {
+  if (!axios.isAxiosError(err) || !err.response) return false;
+  if (!REAL_ERROR_STATUSES.includes(err.response.status)) return false;
+  // Static hosts answer unknown paths with HTML (often 400/403/404). Only a
+  // JSON body proves a live API responded — anything else means "no backend".
+  const contentType = String(err.response.headers?.["content-type"] ?? "");
+  if (contentType.includes("application/json")) return true;
+  const body = err.response.data;
+  return typeof body === "object" && body !== null;
+}
+
 /**
  * Try the real endpoint; on network-level failure (no backend) fall back to
  * the mock. Semantic errors from a live backend (401, 422, …) are rethrown.
@@ -87,11 +99,7 @@ async function withFallback<T>(real: () => Promise<T>, mock: () => Promise<T>): 
   try {
     return await real();
   } catch (err) {
-    if (
-      axios.isAxiosError(err) &&
-      err.response &&
-      REAL_ERROR_STATUSES.includes(err.response.status)
-    ) {
+    if (isRealBackendError(err)) {
       throw toApiError(err);
     }
     return mock();

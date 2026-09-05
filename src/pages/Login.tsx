@@ -55,8 +55,8 @@ export default function Login() {
     } catch (err) {
       const message =
         err instanceof ApiError && err.status === 401
-          ? "Invalid email or password. Try the demo credentials below."
-          : "Something went wrong while signing in. Please retry.";
+          ? "Invalid email or password. Use demo@emailsaas.com / Demo@1234."
+          : "Sign-in failed. Use the demo credentials: demo@emailsaas.com / Demo@1234.";
       setError(message);
       setShakeKey((key) => key + 1);
     } finally {
