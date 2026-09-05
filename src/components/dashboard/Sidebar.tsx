@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { NavLink } from "react-router-dom";
 import {
   FileText,
   LayoutDashboard,
@@ -9,24 +10,16 @@ import {
   Zap,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import { useToast } from "../../context/ToastContext";
 import { useAuth } from "../../context/AuthContext";
+import { useStore } from "../../lib/store";
 import { LogoMark } from "../icons";
 
 interface NavItem {
   label: string;
+  to: string;
   icon: LucideIcon;
-  active?: boolean;
-  badge?: string;
+  badge?: number;
 }
-
-const NAV_ITEMS: NavItem[] = [
-  { label: "Dashboard", icon: LayoutDashboard, active: true },
-  { label: "Campaigns", icon: Send, badge: "3" },
-  { label: "Subscribers", icon: Users },
-  { label: "Templates", icon: FileText },
-  { label: "Settings", icon: Settings },
-];
 
 const MONTHLY_LIMIT = 60000;
 
@@ -39,8 +32,8 @@ export default function Sidebar({
   onClose: () => void;
   emailsSent: number;
 }) {
-  const { push } = useToast();
   const { user } = useAuth();
+  const { campaigns } = useStore();
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -48,6 +41,7 @@ export default function Sidebar({
     return () => window.clearTimeout(timer);
   }, []);
 
+  const pendingCount = campaigns.filter((c) => c.status !== "sent").length;
   const usagePct = Math.min(100, Math.round((emailsSent / MONTHLY_LIMIT) * 100));
   const initials = (user?.full_name ?? "Demo User")
     .split(" ")
@@ -56,12 +50,13 @@ export default function Sidebar({
     .join("")
     .toUpperCase();
 
-  const handleNavigate = (label: string, active?: boolean) => {
-    onClose();
-    if (!active) {
-      push(`${label} ships in the next milestone — this MVP focuses on the dashboard.`, "info");
-    }
-  };
+  const navItems: NavItem[] = [
+    { label: "Dashboard", to: "/dashboard", icon: LayoutDashboard },
+    { label: "Campaigns", to: "/campaigns", icon: Send, badge: pendingCount },
+    { label: "Subscribers", to: "/subscribers", icon: Users },
+    { label: "Templates", to: "/templates", icon: FileText },
+    { label: "Settings", to: "/settings", icon: Settings },
+  ];
 
   return (
     <>
@@ -109,32 +104,28 @@ export default function Sidebar({
           <p className="px-3 pb-2 text-[10px] font-semibold tracking-[0.18em] text-slate-600 uppercase">
             Workspace
           </p>
-          {NAV_ITEMS.map((item, index) => (
-            <button
-              key={item.label}
-              type="button"
-              onClick={() => handleNavigate(item.label, item.active)}
-              className={`group flex w-full animate-fade-up items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200 ${
-                item.active
-                  ? "bg-indigo-600 text-white shadow-lg shadow-indigo-600/30"
-                  : "text-slate-400 hover:translate-x-0.5 hover:bg-slate-800/70 hover:text-white"
-              }`}
+          {navItems.map((item, index) => (
+            <NavLink
+              key={item.to}
+              to={item.to}
+              onClick={onClose}
+              className={({ isActive }) =>
+                `group flex w-full animate-fade-up items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200 ${
+                  isActive
+                    ? "bg-indigo-600 text-white shadow-lg shadow-indigo-600/30"
+                    : "text-slate-400 hover:translate-x-0.5 hover:bg-slate-800/70 hover:text-white"
+                }`
+              }
               style={{ animationDelay: `${80 + index * 55}ms` }}
             >
               <item.icon className="h-4.5 w-4.5 shrink-0" />
               <span className="flex-1 text-left">{item.label}</span>
-              {item.badge && (
-                <span
-                  className={`rounded-full px-2 py-0.5 text-[10px] font-bold tabular-nums ${
-                    item.active
-                      ? "bg-white/20 text-white"
-                      : "bg-slate-800 text-slate-300 group-hover:bg-slate-700"
-                  }`}
-                >
+              {typeof item.badge === "number" && item.badge > 0 && (
+                <span className="rounded-full bg-slate-800 px-2 py-0.5 text-[10px] font-bold text-slate-300 tabular-nums group-hover:bg-slate-700">
                   {item.badge}
                 </span>
               )}
-            </button>
+            </NavLink>
           ))}
         </nav>
 

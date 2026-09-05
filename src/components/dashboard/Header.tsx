@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useLocation } from "react-router-dom";
 import {
   Bell,
   CheckCircle2,
@@ -11,6 +12,15 @@ import {
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { useToast } from "../../context/ToastContext";
+import { useStore } from "../../lib/store";
+
+const PAGE_LABELS: Record<string, string> = {
+  "/dashboard": "Overview",
+  "/campaigns": "Campaigns",
+  "/subscribers": "Subscribers",
+  "/templates": "Templates",
+  "/settings": "Settings",
+};
 
 const NOTIFICATIONS = [
   { icon: CheckCircle2, tint: "text-emerald-500 bg-emerald-50", text: "“Spring Product Launch” finished sending", time: "12m ago" },
@@ -46,10 +56,15 @@ function usePopover() {
 export default function Header({ onMenuClick }: { onMenuClick: () => void }) {
   const { user, logout } = useAuth();
   const { push } = useToast();
+  const { settings } = useStore();
+  const location = useLocation();
   const bell = usePopover();
   const profile = usePopover();
 
-  const initials = (user?.full_name ?? "Demo User")
+  const displayName = settings.profileName.trim() || user?.full_name || "Demo User";
+  const pageLabel = PAGE_LABELS[location.pathname] ?? "Overview";
+
+  const initials = displayName
     .split(" ")
     .map((part) => part[0])
     .slice(0, 2)
@@ -81,7 +96,9 @@ export default function Header({ onMenuClick }: { onMenuClick: () => void }) {
         <div className="flex items-center gap-2 text-sm">
           <span className="hidden font-display font-semibold text-slate-400 sm:inline">Relay</span>
           <span className="hidden text-slate-300 sm:inline">/</span>
-          <span className="font-display font-semibold text-slate-900">Overview</span>
+          <span key={pageLabel} className="animate-fade-in font-display font-semibold text-slate-900">
+            {pageLabel}
+          </span>
         </div>
 
         <div className="ml-auto flex items-center gap-2 sm:gap-3">
@@ -165,7 +182,7 @@ export default function Header({ onMenuClick }: { onMenuClick: () => void }) {
               </span>
               <span className="hidden text-left sm:block">
                 <span className="block text-sm leading-tight font-semibold text-slate-900">
-                  {user?.full_name}
+                  {displayName}
                 </span>
                 <span className="block text-[11px] leading-tight text-slate-400">{user?.plan} plan</span>
               </span>
